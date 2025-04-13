@@ -3,8 +3,8 @@
 #include <AccelStepper.h>
 
 // Stepper Motor Pins
-#define DIR1 18
-#define STEP1 19
+#define DIR1 12
+#define STEP1 14
 #define DIR2 21
 #define STEP2 22
 
@@ -19,7 +19,9 @@ AccelStepper panMotor(AccelStepper::DRIVER, STEP2, DIR2);
 // Web server
 AsyncWebServer server(80);
 
-// Slider position variables
+// Movement state
+int sliderSpeed = 800;
+int sliderDir = 0; // -1 = left, 1 = right, 0 = stop
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -28,11 +30,42 @@ const char index_html[] PROGMEM = R"rawliteral(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Camera Slider</title>
+  <style>
+    body {
+      background-color: #121212;
+      color: white;
+      font-family: sans-serif;
+      text-align: center;
+      margin-top: 40px;
+    }
+    button {
+      font-size: 2rem;
+      padding: 1rem 2rem;
+      margin: 1rem;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 10px;
+    }
+    button:active {
+      background: #555;
+    }
+  </style>
 </head>
 <body>
-  <h2>Camera Slider Control</h2>
+  <h2>Slider Control</h2>
+  <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">&lt;</button>
+  <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">&gt;</button>
 
-  </div>
+  <script>
+    function startMove(dir) {
+      fetch(`/move_slider?dir=${dir}&action=start`);
+    }
+
+    function stopMove() {
+      fetch(`/move_slider?action=stop`);
+    }
+  </script>
 </body>
 </html>
 )rawliteral";
@@ -50,7 +83,7 @@ void setup() {
   panMotor.setMaxSpeed(1000);
   panMotor.setAcceleration(300);
 
-  // Start WiFi config portal
+  // WiFi config
   WiFiManager wm;
   if (!wm.autoConnect("CameraSlider-Setup")) {
     Serial.println("Failed to connect");
@@ -65,9 +98,36 @@ void setup() {
     request->send_P(200, "text/html", index_html);
   });
 
+  // Handle slider movement
+  server.on("/move_slider", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String action = request->getParam("action")->value();
+    if (action == "start") {
+      if (request->hasParam("dir")) {
+        String dir = request->getParam("dir")->value();
+        sliderDir = (dir == "left") ? -1 : 1;
+      }
+    } else if (action == "stop") {
+      sliderDir = 0;
+    }
+    request->send(200, "text/plain", "OK");
+  });
+
   server.begin();
 }
 
 void loop() {
+  // Check end stops
+  if ((digitalRead(ENDSTOP_A) == LOW && sliderDir == -1) ||
+      (digitalRead(ENDSTOP_B) == LOW && sliderDir == 1)) {
+    // sliderDir = 0; // stop if limit reached
+  }
 
+  // Move slider based on direction
+  if (sliderDir == 0) {
+    sliderMotor.setSpeed(0);
+  } else {
+    sliderMotor.setSpeed(sliderSpeed * sliderDir);
+  }
+
+  sliderMotor.runSpeed();
 }
