@@ -2,6 +2,8 @@
 #include <ESPAsyncWebServer.h>
 #include <AccelStepper.h>
 
+#define STATUS_LED 2  // Built-in LED on many ESP32 boards (adjust if needed)
+
 // Stepper Motor Pins
 #define DIR1 12
 #define STEP1 14
@@ -54,10 +56,23 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
   <h2>Slider Control</h2>
+
+  <p>
+    Speed: <span id="speedVal">800</span> steps/sec
+  </p>
+  <input type="range" min="200" max="1000" value="800" id="speedSlider" oninput="updateSpeed(this.value)" />
+
+  <br><br>
+
   <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">&lt;</button>
   <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">&gt;</button>
 
   <script>
+    function updateSpeed(val) {
+      document.getElementById('speedVal').innerText = val;
+      fetch(`/set_speed?value=${val}`);
+    }
+
     function startMove(dir) {
       fetch(`/move_slider?dir=${dir}&action=start`);
     }
@@ -73,22 +88,39 @@ const char index_html[] PROGMEM = R"rawliteral(
 void setup() {
   Serial.begin(115200);
 
+  pinMode(STATUS_LED, OUTPUT);
+
   // Init End Stops
   pinMode(ENDSTOP_A, INPUT_PULLUP);
   pinMode(ENDSTOP_B, INPUT_PULLUP);
 
   // Init Motors
-  sliderMotor.setMaxSpeed(sliderSpeed);
+  sliderMotor.setMaxSpeed(1000);
   sliderMotor.setAcceleration(300);
   panMotor.setMaxSpeed(1000);
   panMotor.setAcceleration(300);
 
   // WiFi config
   WiFiManager wm;
-  if (!wm.autoConnect("CameraSlider-Setup")) {
-    Serial.println("Failed to connect");
-    ESP.restart();
+
+  // Blink LED while waiting for connection
+  unsigned long previousMillis = 0;
+  bool ledState = false;
+  const long interval = 500;
+
+  Serial.println("Starting WiFiManager...");
+
+  while (!wm.autoConnect("CameraSlider-Setup")) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis;
+      ledState = !ledState;
+      digitalWrite(STATUS_LED, ledState);
+    }
   }
+
+  // Connected: turn LED off
+  digitalWrite(STATUS_LED, LOW);
 
   Serial.println("Connected to WiFi");
   Serial.println(WiFi.localIP());
@@ -112,13 +144,22 @@ void setup() {
     request->send(200, "text/plain", "OK");
   });
 
+  // Handle speed change
+  server.on("/set_speed", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("value")) {
+      sliderSpeed = request->getParam("value")->value().toInt();
+      sliderMotor.setMaxSpeed(sliderSpeed);
+    }
+    request->send(200, "text/plain", "OK");
+  });
+
   server.begin();
 }
 
 void loop() {
   // Check end stops
-  if ((digitalRead(ENDSTOP_A) == LOW && sliderDir == -1) ||
-      (digitalRead(ENDSTOP_B) == LOW && sliderDir == 1)) {
+  if ((digitalRead(ENDSTOP_A) == HIGH && sliderDir == -1) ||
+      (digitalRead(ENDSTOP_B) == HIGH && sliderDir == 1)) {
     // sliderDir = 0; // stop if limit reached
   }
 
