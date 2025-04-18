@@ -5,14 +5,14 @@
 #define STATUS_LED 2  // Built-in LED on many ESP32 boards (adjust if needed)
 
 // Stepper Motor Pins
-#define DIR1 12
-#define STEP1 14
+#define DIR1 16
+#define STEP1 17
 #define DIR2 21
 #define STEP2 22
 
 // End Stop Pins for Slider Motor
-#define ENDSTOP_A 32
-#define ENDSTOP_B 33
+#define ENDSTOP_A 4
+#define ENDSTOP_B 5
 
 // Motor setup
 AccelStepper sliderMotor(AccelStepper::DRIVER, STEP1, DIR1);
@@ -158,9 +158,9 @@ void setup() {
 
 void loop() {
   // Check end stops
-  if ((digitalRead(ENDSTOP_A) == HIGH && sliderDir == -1) ||
-      (digitalRead(ENDSTOP_B) == HIGH && sliderDir == 1)) {
-    // sliderDir = 0; // stop if limit reached
+  if ((digitalRead(ENDSTOP_A) == LOW && sliderDir == 1) ||
+  (digitalRead(ENDSTOP_B) == LOW && sliderDir == -1)) {
+    sliderDir = 0; // stop if limit reached
   }
 
   // Move slider based on direction
