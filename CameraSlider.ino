@@ -66,6 +66,13 @@ const char index_html[] PROGMEM = R"rawliteral(
 
   <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">&lt;</button>
   <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">&gt;</button>
+  
+  <br><br>
+  <button onclick="startMove('left')" style="margin-top: 20px;">Start Left</button>
+  <button onclick="startMove('right')" style="margin-top: 20px;">Start Right</button>
+
+  <br><br>
+  <button onclick="stopMove()" style="margin-top: 20px;">Stop</button>
 
   <script>
     function updateSpeed(val) {
@@ -102,21 +109,12 @@ void setup() {
 
   // WiFi config
   WiFiManager wm;
-
-  // Blink LED while waiting for connection
-  unsigned long previousMillis = 0;
-  bool ledState = false;
-  const long interval = 500;
+  digitalWrite(STATUS_LED, HIGH);
 
   Serial.println("Starting WiFiManager...");
 
   while (!wm.autoConnect("CameraSlider-Setup")) {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-      previousMillis = currentMillis;
-      ledState = !ledState;
-      digitalWrite(STATUS_LED, ledState);
-    }
+    digitalWrite(STATUS_LED, HIGH);
   }
 
   // Connected: turn LED off
