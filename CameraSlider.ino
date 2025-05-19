@@ -41,8 +41,8 @@ const char index_html[] PROGMEM = R"rawliteral(
       margin-top: 40px;
     }
     button {
-      font-size: 2rem;
-      padding: 1rem 2rem;
+      font-size: 1rem;
+      padding: 1rem 1rem;
       margin: 1rem;
       background: #333;
       color: white;
@@ -52,6 +52,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     button:active {
       background: #555;
     }
+    .speed-slider {
+      width: 70%;
+      height: 15px;
+      background: #333;
+      border-radius: 5px;
+      outline: none;
+    }
   </style>
 </head>
 <body>
@@ -60,19 +67,13 @@ const char index_html[] PROGMEM = R"rawliteral(
   <p>
     Speed: <span id="speedVal">800</span> steps/sec
   </p>
-  <input type="range" min="200" max="1000" value="800" id="speedSlider" oninput="updateSpeed(this.value)" />
-
-  <br><br>
-
-  <button onmousedown="startMove('left')" onmouseup="stopMove()" ontouchstart="startMove('left')" ontouchend="stopMove()">&lt;</button>
-  <button onmousedown="startMove('right')" onmouseup="stopMove()" ontouchstart="startMove('right')" ontouchend="stopMove()">&gt;</button>
+  <input class="speed-slider" type="range" min="200" max="5000" value="800" id="speedSlider" oninput="updateSpeed(this.value)" />
   
   <br><br>
-  <button onclick="startMove('left')" style="margin-top: 20px;">Start Left</button>
-  <button onclick="startMove('right')" style="margin-top: 20px;">Start Right</button>
-
+  <button onclick="startMove('left')" style="margin-top: 20px;">Move Left</button>
+  <button onclick="startMove('right')" style="margin-top: 20px;">Move Right</button>
   <br><br>
-  <button onclick="stopMove()" style="margin-top: 20px;">Stop</button>
+  <button onclick="stopMove()" style="margin-top: 0px;">Stop</button>
 
   <script>
     function updateSpeed(val) {
