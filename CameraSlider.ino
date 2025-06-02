@@ -65,9 +65,9 @@ const char index_html[] PROGMEM = R"rawliteral(
   <h2>Slider Control</h2>
 
   <p>
-    Speed: <span id="speedVal">800</span> steps/sec
+    Speed: <span id="speedVal">1600</span> steps/sec
   </p>
-  <input class="speed-slider" type="range" min="200" max="5000" value="800" id="speedSlider" oninput="updateSpeed(this.value)" />
+  <input class="speed-slider" type="range" min="20" max="10000" value="1600" id="speedSlider" oninput="updateSpeed(this.value)" />
   
   <br><br>
   <button onclick="startMove('left')" style="margin-top: 20px;">Move Left</button>
