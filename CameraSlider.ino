@@ -2,17 +2,17 @@
 #include <ESPAsyncWebServer.h>
 #include <AccelStepper.h>
 
-#define STATUS_LED 2  // Built-in LED on many ESP32 boards (adjust if needed)
+#define STATUS_LED 8  // Built-in LED on many ESP32 boards (adjust if needed)
 
 // Stepper Motor Pins
-#define DIR1 16
-#define STEP1 17
-#define DIR2 21
-#define STEP2 22
+#define DIR1 4
+#define STEP1 3
+#define DIR2 2
+#define STEP2 1
 
 // End Stop Pins for Slider Motor
-#define ENDSTOP_A 4
-#define ENDSTOP_B 5
+#define ENDSTOP_A 5
+#define ENDSTOP_B 6
 
 // Motor setup
 AccelStepper sliderMotor(AccelStepper::DRIVER, STEP1, DIR1);
