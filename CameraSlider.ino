@@ -22,8 +22,11 @@ AccelStepper panMotor(AccelStepper::DRIVER, STEP2, DIR2);
 AsyncWebServer server(80);
 
 // Movement state
-int sliderSpeed = 800;
+int sliderSpeed = 1600;
 int sliderDir = 0; // -1 = left, 1 = right, 0 = stop
+
+int panDir = 0;           // -1 = left, 1 = right, 0 = stop
+int panSpeed = 100;       // default speed for pan motor
 
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -75,6 +78,15 @@ const char index_html[] PROGMEM = R"rawliteral(
   <br><br>
   <button onclick="stopMove()" style="margin-top: 0px;">Stop</button>
 
+  <h2>Pan Control</h2>
+  <h3>Pan Speed: <span id="panSpeedVal">100</span> steps/sec</h3>
+  <input class="speed-slider" type="range" min="20" max="1000" value="100" id="panSpeedSlider" oninput="updatePanSpeed(this.value)" />
+  <br><br>
+  <button onclick="startPan('left')">Pan Left</button>
+  <button onclick="startPan('right')">Pan Right</button>
+  <br><br>
+  <button onclick="stopPan()">Stop Pan</button>
+
   <script>
     function updateSpeed(val) {
       document.getElementById('speedVal').innerText = val;
@@ -87,6 +99,19 @@ const char index_html[] PROGMEM = R"rawliteral(
 
     function stopMove() {
       fetch(`/move_slider?action=stop`);
+    }
+
+    function startPan(dir) {
+      fetch(`/move_pan?dir=${dir}&action=start`);
+    }
+
+    function stopPan() {
+      fetch(`/move_pan?action=stop`);
+    }
+
+    function updatePanSpeed(val) {
+      document.getElementById('panSpeedVal').innerText = val;
+      fetch(`/set_pan_speed?value=${val}`);
     }
   </script>
 </body>
@@ -103,7 +128,7 @@ void setup() {
   pinMode(ENDSTOP_B, INPUT_PULLUP);
 
   // Init Motors
-  sliderMotor.setMaxSpeed(1000);
+  sliderMotor.setMaxSpeed(10000);
   sliderMotor.setAcceleration(300);
   panMotor.setMaxSpeed(1000);
   panMotor.setAcceleration(300);
@@ -152,6 +177,28 @@ void setup() {
     request->send(200, "text/plain", "OK");
   });
 
+  // Handle pan motor
+  server.on("/move_pan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String action = request->getParam("action")->value();
+    if (action == "start") {
+      if (request->hasParam("dir")) {
+        String dir = request->getParam("dir")->value();
+        panDir = (dir == "left") ? -1 : 1;
+      }
+    } else if (action == "stop") {
+      panDir = 0;
+    }
+    request->send(200, "text/plain", "OK");
+  });
+
+  server.on("/set_pan_speed", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("value")) {
+      panSpeed = request->getParam("value")->value().toInt();
+      panMotor.setMaxSpeed(panSpeed);
+    }
+    request->send(200, "text/plain", "Pan speed updated");
+  });
+
   server.begin();
 }
 
@@ -170,4 +217,13 @@ void loop() {
   }
 
   sliderMotor.runSpeed();
+
+  // Pan motor movement
+  if (panDir == 0) {
+    panMotor.setSpeed(0);
+  } else {
+    panMotor.setSpeed(panSpeed * panDir);
+  }
+
+  panMotor.runSpeed();
 }
