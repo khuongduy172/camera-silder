@@ -206,8 +206,8 @@ void setup() {
     panMotor.moveTo(posB_pan);
     sliderMotor.setMaxSpeed(stepsPerSec_slider);
     panMotor.setMaxSpeed(stepsPerSec_pan);
-    sliderMotor.setAcceleration(10000); // very fast ramp-up
-    panMotor.setAcceleration(10000);
+    sliderMotor.setAcceleration(stepsPerSec_slider * 2);
+    panMotor.setAcceleration(stepsPerSec_pan * 2);
     isRunning = true;
     request->send(200, "text/plain", "Start moving");
   });
