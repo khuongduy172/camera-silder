@@ -26,6 +26,7 @@ long posA_slider = 0, posA_pan = 0;
 long posB_slider = 0, posB_pan = 0;
 int moveDuration = 10;
 bool isRunning = false;
+bool isMoveAB = false;
 unsigned long moveStartTime;
 
 const char index_html[] PROGMEM = R"rawliteral(
@@ -186,7 +187,7 @@ void setup() {
       sliderMotor.moveTo(posB_slider);
       panMotor.moveTo(posB_pan);
     }
-    isRunning = true;
+    isMoveAB = true;
     request->send(200, "text/plain", "Moving to point");
   });
 
@@ -200,22 +201,22 @@ void setup() {
   server.on("/start_move", HTTP_GET, [](AsyncWebServerRequest *request) {
     long deltaSlider = posB_slider - posA_slider;
     long deltaPan = posB_pan - posA_pan;
-    float stepsPerSec_slider = (abs(deltaSlider) / (float)moveDuration);
-    float stepsPerSec_pan = (abs(deltaPan) / (float)moveDuration);
-    sliderMotor.moveTo(posB_slider);
-    panMotor.moveTo(posB_pan);
-    sliderMotor.setMaxSpeed(stepsPerSec_slider);
-    panMotor.setMaxSpeed(stepsPerSec_pan);
-    sliderMotor.setAcceleration(stepsPerSec_slider * 2);
-    panMotor.setAcceleration(stepsPerSec_pan * 2);
+    float stepsPerSec_slider = deltaSlider / (float)moveDuration;
+    float stepsPerSec_pan = deltaPan / (float)moveDuration;
+    sliderMotor.setSpeed(stepsPerSec_slider);
+    panMotor.setSpeed(stepsPerSec_pan);
     isRunning = true;
+    moveStartTime = millis();
     request->send(200, "text/plain", "Start moving");
   });
 
   server.on("/stop_all", HTTP_GET, [](AsyncWebServerRequest *request) {
     sliderMotor.stop();
+    sliderMotor.setSpeed(0);
     panMotor.stop();
+    panMotor.setSpeed(0);
     isRunning = false;
+    isMoveAB = false;
     request->send(200, "text/plain", "Stopped");
   });
 
@@ -228,7 +229,7 @@ void loop() {
     sliderDir = 0;
   }
   
-  if (!isRunning) {
+  if (!isRunning && !isMoveAB) {
     if (sliderDir == 0) {
       sliderMotor.setSpeed(0);
     } else {
@@ -245,10 +246,20 @@ void loop() {
   }
 
   if (isRunning) {
+    sliderMotor.runSpeed();
+    panMotor.runSpeed();
+    if ((millis() - moveStartTime) > (moveDuration * 1000)) {
+      sliderMotor.setSpeed(0);
+      panMotor.setSpeed(0);
+      isRunning = false;
+    }
+  }
+
+  if (isMoveAB) {
     sliderMotor.run();
     panMotor.run();
     if (!sliderMotor.isRunning() && !panMotor.isRunning()) {
-      isRunning = false;
+      isMoveAB = false;
     }
   }
 }
