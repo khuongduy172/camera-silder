@@ -4,14 +4,22 @@
 #include <ESPAsyncWebServer.h>
 #include <AccelStepper.h>
 #include <MultiStepper.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
 
 #define DIR_SLIDER 4
 #define STEP_SLIDER 3
 #define DIR_PAN 2
 #define STEP_PAN 1
-#define STATUS_LED 8 // ESP32-C3 SuperMini built-in LED
+#define STATUS_LED 10
 #define ENDSTOP_MAX 5  // Updated pin for other end of slider
 #define ENDSTOP_MIN 6  // Updated pin for one end of slider
+
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+#define OLED_RESET    -1
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 AccelStepper sliderMotor(AccelStepper::DRIVER, STEP_SLIDER, DIR_SLIDER);
 AccelStepper panMotor(AccelStepper::DRIVER, STEP_PAN, DIR_PAN);
@@ -126,11 +134,30 @@ void setup() {
   steppers.addStepper(sliderMotor);
   steppers.addStepper(panMotor);
 
+  if (!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(0, 0);
+  display.print("Connecting...");
+  display.display();
+
   WiFiManager wm;
   if (!wm.autoConnect("Slider-v2")) {
     ESP.restart();
   }
   digitalWrite(STATUS_LED, LOW);
+
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.println("Connected!");
+  display.print("IP: ");
+  display.println(WiFi.localIP());
+  display.display();
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *req){
     req->send_P(200, "text/html", index_html);
